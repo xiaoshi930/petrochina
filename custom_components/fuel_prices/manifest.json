@@ -1,0 +1,11 @@
+{
+  "domain": "fuel_prices",
+  "name": "油价信息",
+  "codeowners": ["@xiaoshi930"],
+  "config_flow": true,
+  "documentation": "https://github.com/xiaoshi930/fuel_prices",
+  "iot_class": "cloud_polling",
+  "version": "1.0.0",
+  "requirements": ["beautifulsoup4>=4.9.0", "requests>=2.0.0"],
+  "single_instance_allowed": false
+}
