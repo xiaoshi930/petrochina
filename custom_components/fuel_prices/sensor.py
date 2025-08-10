@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import (
     CONF_UPDATE_INTERVAL,
@@ -47,6 +48,11 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
             index = VALID_PROVINCES.index(province)
             province_pinyin = VALID_PROVINCES_PINYIN[index]
             self.entity_id = f"sensor.fuel_price_{province_pinyin}"
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, f"fuel_price_{province_pinyin}")},
+                name=f"中国油价 - {province}",
+                manufacturer="Fuel Price Integration",
+            )
             self._attr_name = f"{province}油价"
             self._attr_icon = "mdi:gas-station"
             self._attr_unique_id = f"fuel_price_{province_pinyin}"
