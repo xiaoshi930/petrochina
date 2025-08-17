@@ -1,11 +1,11 @@
 {
-  "domain": "fuel_prices",
-  "name": "油价信息",
+  "domain": "petrochina",
+  "name": "中国油价信息",
   "codeowners": ["@xiaoshi930"],
   "config_flow": true,
-  "documentation": "https://github.com/xiaoshi930/fuel_prices",
+  "documentation": "https://github.com/xiaoshi930/petrochina",
   "iot_class": "cloud_polling",
-  "version": "1.1",
+  "version": "1.2",
   "requirements": ["beautifulsoup4>=4.9.0", "requests>=2.0.0"],
   "single_instance_allowed": false
 }
