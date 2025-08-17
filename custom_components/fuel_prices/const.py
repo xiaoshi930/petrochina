@@ -1,6 +1,6 @@
 """Constants for the Oil Price integration."""
 
-DOMAIN = "fuel_prices"
+DOMAIN = "petrochina"
 DEFAULT_NAME = "油价信息"
 CONF_UPDATE_INTERVAL = "update_interval"
 DEFAULT_UPDATE_INTERVAL = 1  # 默认1小时更新一次
