@@ -64,16 +64,32 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
         if self.coordinator.data:
-            # 显示调价信息
-            if change := re.search(r'目前预计(上调|下调)油价(\d+)元/吨', str(self.coordinator.data.get("info", ""))):
+            info_text = str(self.coordinator.data.get("info", ""))
+            
+            # 显示调价信息 - 元/吨格式
+            if change := re.search(r'目前预计(上调|下调|下跌|上涨)油价(\d+)元/吨', info_text):
                 # 吨转升换算 (1吨≈1190升)
                 price_per_liter = round(int(change.group(2)) / 1190, 2)
                 
                 # 根据上调或下调添加箭头
-                if change.group(1) == "上调":
+                if change.group(1) == "上调" or change.group(1) == "上涨":
                     return f"预计{change.group(1)}油价: {price_per_liter}元/升↑"
                 else:
                     return f"预计{change.group(1)}油价: {price_per_liter}元/升↓"
+            
+            # 显示调价信息 - 元/升格式（新规则）
+            elif change := re.search(r'(上调|下调|下跌|上涨)([\d\.]+)元/升-([\d\.]+)元/升', info_text):
+                # 已经是元/升单位，不需要换算
+                # 取中间值作为显示
+                min_value = float(change.group(2))
+                max_value = float(change.group(3))
+                avg_value = round((min_value + max_value) / 2, 2)
+                
+                # 根据上调或下调添加箭头
+                if change.group(1) == "上涨":
+                    return f"预计{change.group(1)}油价: {avg_value}元/升↑"
+                else:
+                    return f"预计{change.group(1)}油价: {avg_value}元/升↓"
             
             return "暂无油价信息"
         return None
