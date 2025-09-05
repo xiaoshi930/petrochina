@@ -141,6 +141,10 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
                 info_parts.append(change.group(0))
                 # 保存调价信息到数据字典
                 oil_data["下次调整价格"] = f"{change.group(1)}油价{change.group(2)}元/吨"
+            elif change := re.search(r'目前预计(上调|下调)(\d+)元/吨', trend_text):
+                info_parts.append(change.group(0))
+                # 保存调价信息到数据字典
+                oil_data["下次调整价格"] = f"{change.group(1)}油价{change.group(2)}元/吨"
             elif change := re.search(r'(下跌|上涨)([\d\.]+)元/升-([\d\.]+)元/升', trend_text):
                 info_parts.append(change.group(0))
                 # 保存调价信息到数据字典
