@@ -76,6 +76,16 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
                     return f"预计{change.group(1)}油价: {price_per_liter}元/升↑"
                 else:
                     return f"预计{change.group(1)}油价: {price_per_liter}元/升↓"
+
+            elif change := re.search(r'目前预计(上调|下调|下跌|上涨)(\d+)元/吨', info_text):
+                # 吨转升换算 (1吨≈1190升)
+                price_per_liter = round(int(change.group(2)) / 1190, 2)
+                
+                # 根据上调或下调添加箭头
+                if change.group(1) == "上调" or change.group(1) == "上涨":
+                    return f"预计{change.group(1)}油价: {price_per_liter}元/升↑"
+                else:
+                    return f"预计{change.group(1)}油价: {price_per_liter}元/升↓"
             
             # 显示调价信息 - 元/升格式（新规则）
             elif change := re.search(r'(上调|下调|下跌|上涨)([\d\.]+)元/升-([\d\.]+)元/升', info_text):
