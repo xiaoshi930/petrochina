@@ -6,7 +6,7 @@
 
 ## 安装指南
 
-1. 将 `custom_components/oil_price` 文件夹复制到您的 Home Assistant 配置目录下的 `custom_components` 文件夹中。
+1. 将 `custom_components/petrochina` 文件夹复制到您的 Home Assistant 配置目录下的 `custom_components` 文件夹中。
 2. 重启 Home Assistant。
 
 ## API 说明
