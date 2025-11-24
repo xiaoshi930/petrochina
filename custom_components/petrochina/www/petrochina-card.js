@@ -359,7 +359,7 @@ class PetroChinaCardEditor extends LitElement {
     this.config = config;
   }
 } 
-customElements.define('petrochina-card-editor', PetroChinaCardEditor);
+customElements.define('xiaoshi-petrochina-card-editor', PetroChinaCardEditor);
 
 class PetroChinaCard extends LitElement {
   static get properties() {
@@ -581,7 +581,7 @@ class PetroChinaCard extends LitElement {
   }
 
   static getConfigElement() {
-    return document.createElement("petrochina-card-editor");
+    return document.createElement("xiaoshi-petrochina-card-editor");
   }
 
   connectedCallback() {
@@ -763,7 +763,7 @@ class PetroChinaCard extends LitElement {
     return baseSize + entitySize;
   }
 }
-customElements.define('petrochina-card', PetroChinaCard);
+customElements.define('xiaoshi-petrochina-card', PetroChinaCard);
 
 
 const loadCards = async () => {
@@ -773,7 +773,7 @@ const loadCards = async () => {
 
 const cardConfigs = [
   {
-    type: 'petrochina-card',
+    type: 'xiaoshi-petrochina-card',
     name: '中国油价信息卡',
     description: '中国油价信息卡',
     preview: true
