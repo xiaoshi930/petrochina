@@ -101,6 +101,19 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
                 else:
                     return f"预计{change.group(1)}油价: {avg_value}元/升↓"
             
+            # 新增：匹配"下调70元/吨(0.05元/升-0.06元/升)"格式
+            elif change := re.search(r'(上调|下调|下跌|上涨)(\d+)元/吨\(([\d\.]+)元/升-([\d\.]+)元/升\)', info_text):
+                # 直接使用元/升的数据，取中间值
+                min_value = float(change.group(3))
+                max_value = float(change.group(4))
+                avg_value = round((min_value + max_value) / 2, 2)
+                
+                # 根据上调或下调添加箭头
+                if change.group(1) == "上调" or change.group(1) == "上涨":
+                    return f"预计{change.group(1)}油价: {avg_value}元/升↑"
+                else:
+                    return f"预计{change.group(1)}油价: {avg_value}元/升↓"
+            
             return "暂无油价信息"
         return None
         
