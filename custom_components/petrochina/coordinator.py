@@ -137,18 +137,23 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
                 oil_data["下次调整时间"] = f"{adjustment.group(2)}"
             
             # 提取调价幅度（支持"目前预计上调/下调油价X元/吨"和"下跌X元/升-X元/升"两种格式）
-            if change := re.search(r'目前预计(上调|下调)油价(\d+)元/吨', trend_text):
+            if change := re.search(r'目前预计(上调|下调|下跌|上涨)油价(\d+)元/吨', trend_text):
                 info_parts.append(change.group(0))
                 # 保存调价信息到数据字典
                 oil_data["下次调整价格"] = f"{change.group(1)}油价{change.group(2)}元/吨"
-            elif change := re.search(r'目前预计(上调|下调)(\d+)元/吨', trend_text):
+            elif change := re.search(r'目前预计(上调|下调|下跌|上涨)(\d+)元/吨', trend_text):
                 info_parts.append(change.group(0))
                 # 保存调价信息到数据字典
                 oil_data["下次调整价格"] = f"{change.group(1)}油价{change.group(2)}元/吨"
-            elif change := re.search(r'(下跌|上涨)([\d\.]+)元/升-([\d\.]+)元/升', trend_text):
+            elif change := re.search(r'(上调|下调|下跌|上涨)([\d\.]+)元/升-([\d\.]+)元/升', trend_text):
                 info_parts.append(change.group(0))
                 # 保存调价信息到数据字典
                 oil_data["下次调整价格"] = f"{change.group(1)}{change.group(2)}-{change.group(3)}元/升"
+            # 新增：匹配"下调70元/吨(0.05元/升-0.06元/升)"格式
+            elif change := re.search(r'(上调|下调|下跌|上涨)(\d+)元/吨\(([\d\.]+)元/升-([\d\.]+)元/升\)', trend_text):
+                info_parts.append(change.group(0))
+                # 保存调价信息到数据字典
+                oil_data["下次调整价格"] = f"{change.group(1)}{change.group(2)}元/吨({change.group(3)}-{change.group(4)}元/升)"
             
             # 提取备注信息
             if note := re.search(r'大家相互转告([^。]+)', trend_text):
