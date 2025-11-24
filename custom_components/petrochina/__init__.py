@@ -1,9 +1,10 @@
 """The Oil Price integration."""
 from __future__ import annotations
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.frontend import add_extra_js_url
 
 from .const import (
     DOMAIN, 
@@ -30,6 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
     
+    await setup_petrochina_card(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
     return True
@@ -40,3 +42,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
     
     return unload_ok
+
+async def setup_petrochina_card(hass: HomeAssistant) -> bool:
+    petrochina_card_path = '/petrochina_card-local'
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(petrochina_card_path, hass.config.path('custom_components/petrochina/www'), False)
+    ])
+    add_extra_js_url(hass, petrochina_card_path + f"/petrochina-card.js")
+    return True
