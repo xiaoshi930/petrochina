@@ -44,9 +44,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 async def setup_petrochina_card(hass: HomeAssistant) -> bool:
-    petrochina_card_path = '/petrochina_card-local'
+    petrochina_card_path = '/xiaoshi_petrochina_card-local'
     await hass.http.async_register_static_paths([
         StaticPathConfig(petrochina_card_path, hass.config.path('custom_components/petrochina/www'), False)
     ])
-    add_extra_js_url(hass, petrochina_card_path + f"/petrochina-card.js")
+    add_extra_js_url(hass, petrochina_card_path + f"/xiaoshi-petrochina-card.js")
     return True
