@@ -1,4 +1,4 @@
-console.info("%c 油价卡 \n%c v 1.5  ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: dimgray");
+console.info("%c 油价卡 \n%c v 1.6  ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: dimgray");
 
 import { LitElement, html, css } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
