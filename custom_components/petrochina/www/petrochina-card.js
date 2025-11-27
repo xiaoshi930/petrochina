@@ -19,7 +19,7 @@ class PetroChinaCardEditor extends LitElement {
         display: flex;
         flex-direction: column;
         gap: 10px;
-        min-height: 500px;
+        min-height: 300px;
       }
       .form-group {
         display: flex;
