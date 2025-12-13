@@ -1,4 +1,4 @@
-console.info("%c 消逝-油价卡 \n%c      v 2.2 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: dimgray");
+console.info("%c 消逝-油价卡 \n%c      v 2.3 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: dimgray");
 
 import { LitElement, html, css } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
@@ -793,7 +793,7 @@ class PetroChinaButtonEditor extends LitElement {
       config: { type: Object },
       _searchTerm: { type: String },
       _filteredEntities: { type: Array },
-      _showEntityList: { type: Boolean }  //button新元素
+      _showEntityList: { type: Boolean } //button新元素
     };
   }
 
@@ -912,6 +912,8 @@ class PetroChinaButtonEditor extends LitElement {
         gap: 15px;
         margin-top: 5px;
       }
+      .checkbox-group2 {
+      }
 
       .checkbox-label {
         display: flex;
@@ -982,6 +984,48 @@ class PetroChinaButtonEditor extends LitElement {
             name="button_icon"
             placeholder="mdi:gas-station"
           /></label>
+        </div>
+
+        <div class="checkbox-group2">
+          <input 
+            type="checkbox" 
+            class="checkbox-input"
+            @change=${this._entityChanged}
+            .checked=${this.config.transparent_bg === true}
+            name="transparent_bg"
+            id="transparent_bg"
+          />
+          <label for="transparent_bg" > 
+            （平板端特性）透明背景（勾选后按钮背景透明）
+          </label>
+        </div>
+
+        <div class="checkbox-group2">
+          <input 
+            type="checkbox" 
+            class="checkbox-input"
+            @change=${this._entityChanged}
+            .checked=${this.config.lock_white_fg === true}
+            name="lock_white_fg"
+            id="lock_white_fg" 
+          />
+          <label for="lock_white_fg" > 
+          （平板端特性）白色图标文字（勾选后锁定显示白色）
+          </label>
+        </div>
+
+        <div class="checkbox-group2">
+          <input 
+            type="checkbox" 
+            class="checkbox-input"
+            @change=${this._entityChanged}
+            .checked=${this.config.hide_icon === true}
+            name="hide_icon"
+            id="hide_icon"
+          />
+          <label for="hide_icon" > 
+          （ 平板端特性）隐藏图标（勾选后隐藏图标）
+          </label>
         </div>
 
         <div class="form-group">
@@ -1988,10 +2032,13 @@ class PetroChinaButton extends LitElement {
     const showPreview = this.config.no_preview === true;
     
     // 获取参数
+    const transparentBg = this.config.transparent_bg === true;
+    const hideIcon = this.config.hide_icon === true;
+    const lockWhiteFg = this.config.lock_white_fg === true;
     const buttonIcon = this.config.button_icon || 'mdi:gas-station';
     
     // 设置背景颜色
-    const buttonBgColor = bgColor;
+    const buttonBgColor = transparentBg ? 'transparent' : bgColor;
     
     // 获取小数点精度
     const decimalPrecision = this.config.decimal_precision !== undefined ? parseInt(this.config.decimal_precision) : 1;
@@ -2067,12 +2114,12 @@ class PetroChinaButton extends LitElement {
     
     // 构建显示文本
     const displayText = formattedDisplayValue !== null && displayUnit ? `${formattedDisplayValue}${displayUnit}` : formattedDisplayValue;
-    
+    const iconColor = lockWhiteFg ? 'rgb(255, 255, 255)' : fgColor;
     // 渲染按钮
     const buttonHtml = html`
       <div class="balance-status" style="--fg-color: ${fgColor}; --bg-color: ${buttonBgColor};" @click=${this._handleButtonClick}>
-        <ha-icon class="status-icon" icon="${buttonIcon}"></ha-icon>
-        <span style="color: ${fgColor};">${displayText}</span>
+      ${!hideIcon ? html`<ha-icon class="status-icon" style="color: ${iconColor};" icon="${buttonIcon}"></ha-icon>` : ''}
+        <span style="color: ${iconColor};">${displayText}</span>
       </div>
     `;
 
@@ -2205,5 +2252,3 @@ const cardConfigs = [
 ];
 
 loadCards();
-
-
