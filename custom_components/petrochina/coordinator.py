@@ -2,7 +2,9 @@
 import asyncio
 import logging
 import re
-from datetime import timedelta
+import json
+import os
+from datetime import timedelta, datetime
 
 import aiohttp
 import async_timeout
@@ -37,6 +39,7 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
         self.hass = hass
         self.url = URL
         self.province = province
+        self.cache_file = os.path.join(hass.config.config_dir, f"{DOMAIN}_{province}_cache.json")
 
         super().__init__(
             hass,
@@ -61,13 +64,71 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
                 
         return value  # 如果无法转换，返回原始值
 
+    def _load_cache(self):
+        """从缓存文件加载数据。"""
+        try:
+            if os.path.exists(self.cache_file):
+                with open(self.cache_file, 'r', encoding='utf-8') as f:
+                    cache_data = json.load(f)
+                    
+                # 检查缓存是否过期（24小时内）
+                cache_time = datetime.fromisoformat(cache_data.get('timestamp', '1970-01-01'))
+                if datetime.now() - cache_time < timedelta(hours=24):
+                    _LOGGER.info(f"使用{self.province}的缓存油价数据")
+                    return cache_data.get('data', {})
+                else:
+                    _LOGGER.info(f"{self.province}的缓存数据已过期")
+        except (json.JSONDecodeError, KeyError, ValueError) as error:
+            _LOGGER.error(f"读取缓存文件失败: {error}")
+        
+        return None
+
+    def _save_cache(self, data):
+        """保存数据到缓存文件。"""
+        try:
+            cache_data = {
+                'timestamp': datetime.now().isoformat(),
+                'data': data
+            }
+            
+            # 确保目录存在
+            os.makedirs(os.path.dirname(self.cache_file), exist_ok=True)
+            
+            with open(self.cache_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+                
+            _LOGGER.info(f"已保存{self.province}的油价数据到缓存")
+        except (IOError, OSError) as error:
+            _LOGGER.error(f"保存缓存文件失败: {error}")
+
     async def _async_update_data(self):
         """Update data via library."""
         try:
             async with async_timeout.timeout(10):
-                return await self.hass.async_add_executor_job(self._fetch_data)
+                data = await self.hass.async_add_executor_job(self._fetch_data)
+                
+                # 如果成功获取数据，保存到缓存
+                if data and data.get("省份"):
+                    # 在异步上下文中安全地保存缓存
+                    await self.hass.async_add_executor_job(self._save_cache, data)
+                    return data
+                else:
+                    # 如果获取的数据不完整，尝试使用缓存
+                    cached_data = self._load_cache()
+                    if cached_data:
+                        return cached_data
+                    else:
+                        raise UpdateFailed("获取数据不完整且无可用缓存")
+                        
         except (asyncio.TimeoutError, aiohttp.ClientError) as error:
-            raise UpdateFailed(f"Error communicating with API: {error}")
+            _LOGGER.warning(f"API访问失败，尝试使用缓存数据: {error}")
+            
+            # API访问失败时，尝试使用缓存数据
+            cached_data = self._load_cache()
+            if cached_data:
+                return cached_data
+            else:
+                raise UpdateFailed(f"API访问失败且无可用缓存: {error}")
 
     def _fetch_data(self):
         """Fetch data from website and API."""
