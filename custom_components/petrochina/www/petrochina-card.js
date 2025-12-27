@@ -2038,7 +2038,7 @@ class PetroChinaButton extends LitElement {
     const buttonIcon = this.config.button_icon || 'mdi:gas-station';
     
     // 设置背景颜色
-    const buttonBgColor = transparentBg ? 'transparent' : bgColor;
+    const buttonBgColor = transparentBg ? 'transparent' : theme === 'on' ? 'rgb(255, 255, 255, 0.6)' : 'rgb(83, 83, 83, 0.6)';
     
     // 获取小数点精度
     const decimalPrecision = this.config.decimal_precision !== undefined ? parseInt(this.config.decimal_precision) : 1;
