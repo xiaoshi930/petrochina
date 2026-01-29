@@ -1,4 +1,4 @@
-console.info("%c 消逝-油价卡 \n%c      v 2.6 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
+console.info("%c 消逝卡-油价卡 \n%c        v 2.8 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
 
 import { LitElement, html, css } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
@@ -686,17 +686,27 @@ class PetroChinaCard extends LitElement {
 
   _handleRefresh() {
     this._loadOilPriceData();
-    navigator.vibrate(50);
+    _handleClick()
   }
 
   _handleEntityClick(entity) {
-    navigator.vibrate(50);
+    _handleClick()
     // 点击实体时打开实体详情页
     if (entity.entity_id) {
       const evt = new Event('hass-more-info', { composed: true });
       evt.detail = { entityId: entity.entity_id };
       this.dispatchEvent(evt);
     }
+  }
+
+  _handleClick(){
+    const hapticEvent = new Event('haptic', {
+      bubbles: true,
+      cancelable: false,
+      composed: true
+    });
+    hapticEvent.detail = 'light';
+    this.dispatchEvent(hapticEvent);
   }
 
   _getPriceColor(text) {
@@ -1761,11 +1771,11 @@ class PetroChinaButton extends LitElement {
 
   _handleRefresh() {
     this._loadOilPriceData();
-    navigator.vibrate(50);
+    _handleClick()
   }
 
   _handleEntityClick(entity) {
-    navigator.vibrate(50);
+    _handleClick()
     // 点击实体时打开实体详情页
     if (entity.entity_id) {
       const evt = new Event('hass-more-info', { composed: true });
@@ -1774,6 +1784,15 @@ class PetroChinaButton extends LitElement {
     }
   }
 
+  _handleClick(){
+    const hapticEvent = new Event('haptic', {
+      bubbles: true,
+      cancelable: false,
+      composed: true
+    });
+    hapticEvent.detail = 'light';
+    this.dispatchEvent(hapticEvent);
+  }
 
   /*button新元素 开始*/
   _handleButtonClick() {
@@ -1847,14 +1866,13 @@ class PetroChinaButton extends LitElement {
   }
 
   _handleClick(){
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
-    else if (navigator.webkitVibrate) {
-        navigator.webkitVibrate(50); 
-    }
-    else {
-    }
+    const hapticEvent = new Event('haptic', {
+      bubbles: true,
+      cancelable: false,
+      composed: true
+    });
+    hapticEvent.detail = 'light';
+    this.dispatchEvent(hapticEvent);
   }
 
   _parseYamlCards(yamlString) {
