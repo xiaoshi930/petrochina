@@ -73,13 +73,11 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
             # 如果有下轮调整时间，显示下轮时间
             if next_time:
                 # 格式化时间
-                next_display = next_time.replace("-", "月").replace("24时", "日24时")
-                return f"下次: {next_display}"
+                return f"{next_time} - {next_price}"
             
             # 如果有本轮调整时间，显示本轮时间
             if current_time:
-                current_display = current_time.replace("-", "月").replace("24时", "日24时")
-                return f"下次: {current_display}"
+                return f"{current_time} - {current_price}"
             
             return "暂无油价信息"
         return None
