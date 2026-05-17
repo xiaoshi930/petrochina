@@ -64,55 +64,22 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
         if self.coordinator.data:
-            info_text = str(self.coordinator.data.get("info", ""))
+            # 直接使用coordinator提取的数据
+            current_time = self.coordinator.data.get("本轮调整时间", "")
+            current_price = self.coordinator.data.get("本轮调整价格", "")
+            next_time = self.coordinator.data.get("下轮调整时间", "")
+            next_price = self.coordinator.data.get("下轮调整价格", "")
             
-            # 显示调价信息 - 元/吨格式
-            if change := re.search(r'目前预计(上调|下调|下跌|上涨)油价(\d+)元/吨', info_text):
-                # 吨转升换算 (1吨≈1190升)
-                price_per_liter = round(int(change.group(2)) / 1190, 2)
-                
-                # 根据上调或下调添加箭头
-                if change.group(1) == "上调" or change.group(1) == "上涨":
-                    return f"预计{change.group(1)}油价: {price_per_liter}元/升↑"
-                else:
-                    return f"预计{change.group(1)}油价: {price_per_liter}元/升↓"
-
-            elif change := re.search(r'目前预计(上调|下调|下跌|上涨)(\d+)元/吨', info_text):
-                # 吨转升换算 (1吨≈1190升)
-                price_per_liter = round(int(change.group(2)) / 1190, 2)
-                
-                # 根据上调或下调添加箭头
-                if change.group(1) == "上调" or change.group(1) == "上涨":
-                    return f"预计{change.group(1)}油价: {price_per_liter}元/升↑"
-                else:
-                    return f"预计{change.group(1)}油价: {price_per_liter}元/升↓"
+            # 如果有下轮调整时间，显示下轮时间
+            if next_time:
+                # 格式化时间
+                next_display = next_time.replace("-", "月").replace("24时", "日24时")
+                return f"下次: {next_display}"
             
-            # 显示调价信息 - 元/升格式（新规则）
-            elif change := re.search(r'(上调|下调|下跌|上涨)([\d\.]+)元/升-([\d\.]+)元/升', info_text):
-                # 已经是元/升单位，不需要换算
-                # 取中间值作为显示
-                min_value = float(change.group(2))
-                max_value = float(change.group(3))
-                avg_value = round((min_value + max_value) / 2, 2)
-                
-                # 根据上调或下调添加箭头
-                if change.group(1) == "上涨":
-                    return f"预计{change.group(1)}油价: {avg_value}元/升↑"
-                else:
-                    return f"预计{change.group(1)}油价: {avg_value}元/升↓"
-            
-            # 新增：匹配"下调70元/吨(0.05元/升-0.06元/升)"格式
-            elif change := re.search(r'(上调|下调|下跌|上涨)(\d+)元/吨\(([\d\.]+)元/升-([\d\.]+)元/升\)', info_text):
-                # 直接使用元/升的数据，取中间值
-                min_value = float(change.group(3))
-                max_value = float(change.group(4))
-                avg_value = round((min_value + max_value) / 2, 2)
-                
-                # 根据上调或下调添加箭头
-                if change.group(1) == "上调" or change.group(1) == "上涨":
-                    return f"预计{change.group(1)}油价: {avg_value}元/升↑"
-                else:
-                    return f"预计{change.group(1)}油价: {avg_value}元/升↓"
+            # 如果有本轮调整时间，显示本轮时间
+            if current_time:
+                current_display = current_time.replace("-", "月").replace("24时", "日24时")
+                return f"下次: {current_display}"
             
             return "暂无油价信息"
         return None
@@ -129,27 +96,68 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
             else:
                 attrs["省份"] = self._province
                 
-            # 添加各类油价
+            # 添加各类油价（来自API）
             oil_types = ["柴油", "89#汽油", "92#汽油", "95#汽油", "98#汽油"]
             for oil_type in oil_types:
                 if oil_type in self.coordinator.data:
                     attrs[oil_type] = self.coordinator.data[oil_type]
 
-            # 添加下次调整价格
-            if "下次调整价格" in self.coordinator.data:
-                attrs["下次调整价格"] = self.coordinator.data["下次调整价格"]
-
-            # 添加下次调整时间
-            if "下次调整时间" in self.coordinator.data:
-                attrs["下次调整时间"] = self.coordinator.data["下次调整时间"]
-                
-            # 添加油价趋势
-            if "油价趋势" in self.coordinator.data:
-                attrs["油价趋势"] = self.coordinator.data["油价趋势"]
+            # 添加本轮调整信息
+            if "本轮调整时间" in self.coordinator.data:
+                attrs["本轮调整时间"] = self.coordinator.data["本轮调整时间"]
             
-            # 添加原始数据
-            if "原始内容" in self.coordinator.data:
-                attrs["原始数据"] = self.coordinator.data["原始内容"]
+            if "本轮调整价格" in self.coordinator.data:
+                attrs["本轮调整价格"] = self.coordinator.data["本轮调整价格"]
+
+            # 添加下轮调整时间
+            if "下轮调整时间" in self.coordinator.data:
+                attrs["下轮调整时间"] = self.coordinator.data["下轮调整时间"]
+            
+            # 添加下轮调整价格
+            if "下轮调整价格" in self.coordinator.data:
+                attrs["下轮调整价格"] = self.coordinator.data["下轮调整价格"]
+
+            # 添加全国省份油价排序（按92+95均价从低到高）
+            if "全国油价数据" in self.coordinator.data:
+                all_provinces = self.coordinator.data["全国油价数据"]
+                # 过滤掉均价为None的省份，然后按均价排序
+                valid_provinces = [p for p in all_provinces if p.get("均价排序") is not None]
+                valid_provinces.sort(key=lambda x: x["均价排序"])
+                
+                # 移除"均价排序"字段，只保留显示需要的字段
+                display_provinces = []
+                for p in valid_provinces:
+                    display_provinces.append({
+                        "省份": p["省份"],
+                        "00#柴油": p.get("柴油"),
+                        "89#汽油": p.get("89#汽油"),
+                        "92#汽油": p.get("92#汽油"),
+                        "95#汽油": p.get("95#汽油"),
+                        "98#汽油": p.get("98#汽油"),
+                    })
+                
+                attrs["全国油价排序"] = display_provinces
+            
+            # 添加调整日历（按2026、2025、2024排序，上调加💖，下调加💚）
+            if "调整日历" in self.coordinator.data:
+                calendar = self.coordinator.data["调整日历"]
+                sorted_calendar = {}
+                for year in ["2026", "2025", "2024"]:
+                    if year in calendar:
+                        year_data = dict(calendar[year])
+                        # 处理日期中的emoji
+                        if "日期" in year_data:
+                            dates = {}
+                            for date_str, status in year_data["日期"].items():
+                                if "上调" in status:
+                                    dates[date_str] = status + "💖"
+                                elif "下调" in status:
+                                    dates[date_str] = status + "💚"
+                                else:
+                                    dates[date_str] = status
+                            year_data["日期"] = dates
+                        sorted_calendar[year] = year_data
+                attrs["调整日历"] = sorted_calendar
 
         return attrs
 
