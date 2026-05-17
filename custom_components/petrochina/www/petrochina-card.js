@@ -1,4 +1,4 @@
-console.info("%c 消逝卡-油价卡 \n%c        v 2.8 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
+console.info("%c 消逝卡-油价卡 \n%c        v 2.9 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
 
 import { LitElement, html, css } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
@@ -657,6 +657,13 @@ class PetroChinaCard extends LitElement {
         if (!entity) continue;
 
         const attributes = entity.attributes;
+        // 处理本轮调整价格字典
+        const currentPrice = attributes.本轮调整价格 || {};
+        let currentPriceStr = '';
+        if (typeof currentPrice === 'object' && currentPrice !== null) {
+          currentPriceStr = Object.entries(currentPrice).map(([k, v]) => `${k}: ${v}`).join(', ');
+        }
+        
         oilPriceData.push({
           entity_id: entityId,
           friendly_name: attributes.friendly_name || entityId,
@@ -666,12 +673,13 @@ class PetroChinaCard extends LitElement {
           gasoline92: attributes['92#汽油'] || 0,
           gasoline95: attributes['95#汽油'] || 0,
           gasoline98: attributes['98#汽油'] || 0,
-          next_adjustment_price: attributes.下次调整价格 || '',
-          next_adjustment_time: attributes.下次调整时间 || '',
-          price_trend: attributes.油价趋势 || '',
-          raw_data: attributes.原始数据 || '',
+          current_adjustment_time: attributes.本轮调整时间 || '',
+          current_adjustment_price: currentPriceStr,
+          next_adjustment_price: attributes.下轮调整价格 || '',
+          next_adjustment_time: attributes.下轮调整时间 || '',
           icon: attributes.icon || 'mdi:gas-station',
-          expected_adjustment: entity.state || '0'
+          expected_adjustment: entity.state || '0',
+          全国油价排序: attributes['全国油价排序'] || []
         });
       }
 
@@ -752,17 +760,57 @@ class PetroChinaCard extends LitElement {
                   </div>
                   <div class="device-item" @click=${() => this._handleEntityClick(oilData)}>
                     <div class="device-info">
-                      <div class="device-details">
-                        <ha-icon icon="mdi:gas-station"></ha-icon> 92#: ¥${oilData.gasoline92}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 95#: ¥${oilData.gasoline95}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 98#: ¥${oilData.gasoline98}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 柴油: ¥${oilData.diesel}
+                      <div class="device-details" style="margin-bottom: 8px;">
+                        当前油价：<ha-icon icon="mdi:gas-station"></ha-icon> 92#: ¥${oilData.gasoline92}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 95#: ¥${oilData.gasoline95}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 98#: ¥${oilData.gasoline98}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 柴油: ¥${oilData.diesel}
                       </div>
-                      <div class="device-details">
-                        ${oilData.next_adjustment_time} - ${oilData.next_adjustment_price}
+                      ${oilData.current_adjustment_time ? html`
+                      <div class="device-details" style="margin-bottom: 2px;">
+                        本轮油价： ${oilData.current_adjustment_time}
                       </div>
-                      <div class="device-details" style="color: ${this._getPriceColor(oilData.price_trend)}">
-                        ${oilData.price_trend}
+                      ${oilData.current_adjustment_price ? html`
+                        ${oilData.current_adjustment_price.split(',').map(price => html`
+                        <div class="device-details" style="margin-bottom: 2px;">
+                          　　　${price.trim()}
+                        </div>
+                        `)}
+                      ` : ''}
+                      ` : ''}
+                      <div class="device-details" style="margin-bottom: 2px;">
+                        下轮油价： ${oilData.next_adjustment_time}
                       </div>
+                      ${oilData.next_adjustment_price ? html`
+                        ${oilData.next_adjustment_price.split(',').map(price => html`
+                        <div class="device-details" style="margin-bottom: 2px;">
+                          　　　${price.trim()}
+                        </div>
+                        `)}
+                      ` : ''}
                     </div>
                   </div>
+                  
+                  <!-- 全国油价排名 -->
+                  ${oilData.全国油价排序 ? html`
+                  <div class="section-divider" style="margin-top: 16px;">
+                    <div class="section-title">
+                      <span>🏆 油价省份排名（价格由低到高，92#与95#均价排行）</span>
+                    </div>
+                  </div>
+                  <div class="device-item">
+                    <div class="device-info">
+                      ${oilData.全国油价排序.slice(0, 5).map((item, index) => html`
+                        <div class="device-details" style="margin-bottom: 4px;">
+                          <span style="display: inline-block; width: 60px; color: ${index < 3 ? '#FFD700' : 'inherit'}; font-weight: bold;">${index + 1}.${item.省份}</span><span style="display: inline-block; width: 75px;">92#: ¥${item['92#汽油']}</span><span style="display: inline-block; width: 75px;">95#: ¥${item['95#汽油']}</span><span style="display: inline-block; width: 75px;">柴油: ¥${item['00#柴油']}</span>
+                        </div>
+                      `)}
+                      <div class="device-details" style="margin-bottom: 4px; color: #888;">......</div>
+                      ${oilData.全国油价排序.slice(-5).map((item, index) => html`
+                        <div class="device-details" style="margin-bottom: 4px;">
+                          <span style="display: inline-block; width: 60px; font-weight: bold;">${oilData.全国油价排序.length - 4 + index}.${item.省份}</span><span style="display: inline-block; width: 75px;">92#: ¥${item['92#汽油']}</span><span style="display: inline-block; width: 75px;">95#: ¥${item['95#汽油']}</span><span style="display: inline-block; width: 75px;">柴油: ¥${item['00#柴油']}</span>
+                        </div>
+                      `)}
+                    </div>
+                  </div>
+                  ` : ''}
                 `)}
               `
           }
@@ -1738,6 +1786,13 @@ class PetroChinaButton extends LitElement {
         if (!entity) continue;
 
         const attributes = entity.attributes;
+        // 处理本轮调整价格字典
+        const currentPrice = attributes.本轮调整价格 || {};
+        let currentPriceStr = '';
+        if (typeof currentPrice === 'object' && currentPrice !== null) {
+          currentPriceStr = Object.entries(currentPrice).map(([k, v]) => `${k}: ${v}`).join(', ');
+        }
+        
         oilPriceData.push({
           entity_id: entityId,
           friendly_name: attributes.friendly_name || entityId,
@@ -1747,12 +1802,13 @@ class PetroChinaButton extends LitElement {
           gasoline92: attributes['92#汽油'] || 0,
           gasoline95: attributes['95#汽油'] || 0,
           gasoline98: attributes['98#汽油'] || 0,
-          next_adjustment_price: attributes.下次调整价格 || '',
-          next_adjustment_time: attributes.下次调整时间 || '',
-          price_trend: attributes.油价趋势 || '',
-          raw_data: attributes.原始数据 || '',
+          current_adjustment_time: attributes.本轮调整时间 || '',
+          current_adjustment_price: currentPriceStr,
+          next_adjustment_price: attributes.下轮调整价格 || '',
+          next_adjustment_time: attributes.下轮调整时间 || '',
           icon: attributes.icon || 'mdi:gas-station',
-          expected_adjustment: entity.state || '0'
+          expected_adjustment: entity.state || '0',
+          全国油价排序: attributes['全国油价排序'] || []
         });
       }
 
@@ -2170,17 +2226,57 @@ class PetroChinaButton extends LitElement {
                   </div>
                   <div class="device-item" @click=${() => this._handleEntityClick(oilData)}>
                     <div class="device-info">
-                      <div class="device-details">
-                        <ha-icon icon="mdi:gas-station"></ha-icon> 92#: ¥${oilData.gasoline92}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 95#: ¥${oilData.gasoline95}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 98#: ¥${oilData.gasoline98}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 柴油: ¥${oilData.diesel}
+                      <div class="device-details" style="margin-bottom: 8px;">
+                        当前油价：<ha-icon icon="mdi:gas-station"></ha-icon> 92#: ¥${oilData.gasoline92}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 95#: ¥${oilData.gasoline95}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 98#: ¥${oilData.gasoline98}&emsp;<ha-icon icon="mdi:gas-station"></ha-icon> 柴油: ¥${oilData.diesel}
                       </div>
-                      <div class="device-details">
-                        ${oilData.next_adjustment_time} - ${oilData.next_adjustment_price}
+                      ${oilData.current_adjustment_time ? html`
+                      <div class="device-details" style="margin-bottom: 2px;">
+                        本轮油价： ${oilData.current_adjustment_time}
                       </div>
-                      <div class="device-details" style="color: ${this._getPriceColor(oilData.price_trend)}">
-                        ${oilData.price_trend}
+                      ${oilData.current_adjustment_price ? html`
+                        ${oilData.current_adjustment_price.split(',').map(price => html`
+                        <div class="device-details" style="margin-bottom: 2px;">
+                          　　　${price.trim()}
+                        </div>
+                        `)}
+                      ` : ''}
+                      ` : ''}
+                      <div class="device-details" style="margin-bottom: 2px;">
+                        下轮油价： ${oilData.next_adjustment_time}
                       </div>
+                      ${oilData.next_adjustment_price ? html`
+                        ${oilData.next_adjustment_price.split(',').map(price => html`
+                        <div class="device-details" style="margin-bottom: 2px;">
+                          　　　${price.trim()}
+                        </div>
+                        `)}
+                      ` : ''}
                     </div>
                   </div>
+                  
+                  <!-- 全国油价排名 -->
+                  ${oilData.全国油价排序 ? html`
+                  <div class="section-divider" style="margin-top: 16px;">
+                    <div class="section-title">
+                      <span>🏆 油价省份排名（价格由低到高，92#与95#均价排行）</span>
+                    </div>
+                  </div>
+                  <div class="device-item">
+                    <div class="device-info">
+                      ${oilData.全国油价排序.slice(0, 5).map((item, index) => html`
+                        <div class="device-details" style="margin-bottom: 4px;">
+                          <span style="display: inline-block; width: 60px; color: ${index < 3 ? '#FFD700' : 'inherit'}; font-weight: bold;">${index + 1}.${item.省份}</span><span style="display: inline-block; width: 75px;">92#: ¥${item['92#汽油']}</span><span style="display: inline-block; width: 75px;">95#: ¥${item['95#汽油']}</span><span style="display: inline-block; width: 75px;">柴油: ¥${item['00#柴油']}</span>
+                        </div>
+                      `)}
+                      <div class="device-details" style="margin-bottom: 4px; color: #888;">......</div>
+                      ${oilData.全国油价排序.slice(-5).map((item, index) => html`
+                        <div class="device-details" style="margin-bottom: 4px;">
+                          <span style="display: inline-block; width: 60px; font-weight: bold;">${oilData.全国油价排序.length - 4 + index}.${item.省份}</span><span style="display: inline-block; width: 75px;">92#: ¥${item['92#汽油']}</span><span style="display: inline-block; width: 75px;">95#: ¥${item['95#汽油']}</span><span style="display: inline-block; width: 75px;">柴油: ¥${item['00#柴油']}</span>
+                        </div>
+                      `)}
+                    </div>
+                  </div>
+                  ` : ''}
                 `)}
               `
           }
