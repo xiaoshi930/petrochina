@@ -1,6 +1,21 @@
-console.info("%c 消逝卡-油价卡 \n%c        v 3.0 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
-
+console.info("%c 消逝卡-油价卡 \n%c        v 3.1 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
 import { LitElement, html, css } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
+
+window.customCards = window.customCards || [];
+window.customCards.push(
+  {
+    type: 'xiaoshi-petrochina-card',
+    name: '中国油价信息卡片',
+    description: '中国油价信息卡片',
+    preview: true
+  },
+  {
+    type: 'xiaoshi-petrochina-button',
+    name: '中国油价信息按钮',
+    description: '中国油价信息按钮',
+    preview: true
+  }
+);
 
 class PetroChinaCardEditor extends LitElement {
   static get properties() {
@@ -266,16 +281,36 @@ class PetroChinaCardEditor extends LitElement {
             搜索并选择要显示的油价实体，支持多选
           </div>
         </div>
+
+        <div class="checkbox-group2">
+          <input 
+            type="checkbox" 
+            class="checkbox-input"
+            @change=${this._entityChanged}
+            .checked=${this.config.show_province_rank !== false}
+            name="show_province_rank"
+            id="show_province_rank"
+          />
+          <label for="show_province_rank" > 
+            显示油价省份排行（默认显示）
+          </label>
+        </div>
       </div>
 
     `;
   }
 
   _entityChanged(e) {
-    const { name, value } = e.target;
-    if (!value && name !== 'theme' && name !== 'width' ) return;
+    const { name, value, type, checked } = e.target;
     
-    let finalValue = value;
+    let finalValue;
+    // 处理复选框
+    if (type === 'checkbox') {
+      finalValue = checked;
+    } else {
+      if (!value && name !== 'theme' && name !== 'width') return;
+      finalValue = value;
+    }
     
     // 处理不同字段的默认值
     if (name === 'width') {
@@ -789,7 +824,7 @@ class PetroChinaCard extends LitElement {
                   </div>
                   
                   <!-- 全国油价排名 -->
-                  ${oilData.全国油价排序 ? html`
+                  ${oilData.全国油价排序 && this.config.show_province_rank !== false ? html`
                   <div class="section-divider" style="margin-top: 16px;">
                     <div class="section-title">
                       <span>🏆 油价省份排名（价格由低到高，92#与95#均价排行）</span>
@@ -1036,9 +1071,9 @@ class PetroChinaButtonEditor extends LitElement {
           <input 
             type="text" 
             @change=${this._entityChanged}
-            .value=${this.config.button_icon !== undefined ? this.config.button_icon : 'mdi:gas-station'}
+            .value=${this.config.button_icon !== undefined ? this.config.button_icon : '⛽'}
             name="button_icon"
-            placeholder="mdi:gas-station"
+            placeholder="⛽"
           /></label>
         </div>
 
@@ -1081,6 +1116,20 @@ class PetroChinaButtonEditor extends LitElement {
           />
           <label for="hide_icon" > 
           （ 平板端特性）隐藏图标（勾选后隐藏图标）
+          </label>
+        </div>
+
+        <div class="checkbox-group2">
+          <input 
+            type="checkbox" 
+            class="checkbox-input"
+            @change=${this._entityChanged}
+            .checked=${this.config.show_province_rank !== false}
+            name="show_province_rank"
+            id="show_province_rank"
+          />
+          <label for="show_province_rank" > 
+            显示油价省份排行（默认显示）
           </label>
         </div>
 
@@ -1524,6 +1573,8 @@ class PetroChinaButton extends LitElement {
         --mdc-icon-size: var(--button-icon-size, 13px);
         color: var(--fg-color, #000);
         margin-right: 3px;
+        display: inline-flex;
+        align-items: center;
       }
 
       /*button新元素 结束*/
@@ -2271,7 +2322,7 @@ class PetroChinaButton extends LitElement {
     const transparentBg = this.config.transparent_bg === true;
     const hideIcon = this.config.hide_icon === true;
     const lockWhiteFg = this.config.lock_white_fg === true;
-    const buttonIcon = this.config.button_icon || 'mdi:gas-station';
+    const buttonIcon = this.config.button_icon || '⛽';
     
     // 设置背景颜色
     const buttonBgColor = transparentBg ? 'transparent' : theme === 'on' ? 'rgb(255, 255, 255, 0.6)' : 'rgb(83, 83, 83, 0.6)';
@@ -2354,7 +2405,7 @@ class PetroChinaButton extends LitElement {
     // 渲染按钮
     const buttonHtml = html`
       <div class="balance-status" style="--fg-color: ${fgColor}; --bg-color: ${buttonBgColor};" @click=${this._handleButtonClick}>
-      ${!hideIcon ? html`<ha-icon class="status-icon" style="color: ${iconColor};" icon="${buttonIcon}"></ha-icon>` : ''}
+      ${!hideIcon ? (buttonIcon.startsWith('mdi:') ? html`<ha-icon class="status-icon" style="color: ${iconColor};" icon="${buttonIcon}"></ha-icon>` : html`<span class="status-icon" style="color: ${iconColor}; font-size: var(--button-icon-size, 13px); line-height: 1;">${buttonIcon}</span>`) : ''}
         <span style="color: ${iconColor};">${displayText}</span>
       </div>
     `;
@@ -2419,7 +2470,7 @@ class PetroChinaButton extends LitElement {
                   </div>
                   
                   <!-- 全国油价排名 -->
-                  ${oilData.全国油价排序 ? html`
+                  ${oilData.全国油价排序 && this.config.show_province_rank !== false ? html`
                   <div class="section-divider" style="margin-top: 16px;">
                     <div class="section-title">
                       <span>🏆 油价省份排名（价格由低到高，92#与95#均价排行）</span>
@@ -2506,25 +2557,3 @@ class PetroChinaButton extends LitElement {
   }
 }
 customElements.define('xiaoshi-petrochina-button', PetroChinaButton);
-
-const loadCards = async () => {
-    window.customCards = window.customCards || [];
-    window.customCards.push(...cardConfigs);
-};
-
-const cardConfigs = [
-  {
-    type: 'xiaoshi-petrochina-card',
-    name: '中国油价信息卡片',
-    description: '中国油价信息卡片',
-    preview: true
-  },
-  {
-    type: 'xiaoshi-petrochina-button',
-    name: '中国油价信息按钮',
-    description: '中国油价信息按钮',
-    preview: true
-  }
-];
-
-loadCards();
