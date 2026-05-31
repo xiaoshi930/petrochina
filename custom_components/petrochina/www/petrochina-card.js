@@ -1,4 +1,4 @@
-console.info("%c 消逝卡-油价卡 \n%c        v 3.1 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
+console.info("%c 消逝卡-油价卡 \n%c        v 3.2 ", "color: red; font-weight: bold; background: black", "color: white; font-weight: bold; background: black");
 import { LitElement, html, css } from "https://unpkg.com/lit-element@2.4.0/lit-element.js?module";
 
 window.customCards = window.customCards || [];
@@ -217,11 +217,12 @@ class PetroChinaCardEditor extends LitElement {
           <label>主题</label>
           <select 
             @change=${this._entityChanged}
-            .value=${this.config.theme !== undefined ? this.config.theme : 'on'}
+            .value=${this.config.theme !== undefined ? this.config.theme : 'system'}
             name="theme"
           >
-            <option value="on">浅色主题（白底黑字）</option>
-            <option value="off">深色主题（深灰底白字）</option>
+            <option value="system">跟随系统</option>
+            <option value="light">浅色主题（白底黑字）</option>
+            <option value="dark">深色主题（黑底白字）</option>
           </select>
         </div>
         
@@ -633,7 +634,7 @@ class PetroChinaCard extends LitElement {
     this._oilPriceData = [];
     this._loading = false;
     this._refreshInterval = null;
-    this.theme = 'on';
+    this.theme = 'system';
   }
 
   static getConfigElement() {
@@ -654,20 +655,24 @@ class PetroChinaCard extends LitElement {
   }
 
   _evaluateTheme() {
-    try {
-      if (!this.config || !this.config.theme) return 'on';
-      if (typeof this.config.theme === 'function') {
-          return this.config.theme();
+      try {
+          const mode = this.config ? this.config.theme : 'system';
+          if (mode === 'light') return 'light';
+          if (mode === 'dark') return 'dark';
+          if (mode === 'system' || !mode) {
+              if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+              return 'light';
+          }
+          if (mode === 'function' || (typeof mode === 'string' && mode.includes('theme()'))) {
+              if (typeof window.theme === 'function') {
+                  return window.theme() || 'light';
+              }
+            return 'light';
+          }
+          return mode;
+      } catch (e) {
+          return 'light';
       }
-      if (typeof this.config.theme === 'string' && 
-              (this.config.theme.includes('return') || this.config.theme.includes('=>'))) {
-          return (new Function(`return ${this.config.theme}`))();
-      }
-      return this.config.theme;
-    } catch(e) {
-      console.error('计算主题时出错:', e);
-      return 'on';
-    }
   }
 
   disconnectedCallback() {
@@ -768,8 +773,8 @@ class PetroChinaCard extends LitElement {
     }
     // 获取主题和颜色
     const theme = this._evaluateTheme();
-    const fgColor = theme === 'on' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
-    const bgColor = theme === 'on' ? 'rgb(255, 255, 255)' : 'rgb(50, 50, 50)';
+    const fgColor = theme === 'light' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
+    const bgColor = theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(50, 50, 50)';
     
     return html`
       <ha-card style="--fg-color: ${fgColor}; --bg-color: ${bgColor};">
@@ -1323,11 +1328,11 @@ class PetroChinaButtonEditor extends LitElement {
           <label>主题</label>
           <select 
             @change=${this._entityChanged}
-            .value=${this.config.theme !== undefined ? this.config.theme : 'on'}
+            .value=${this.config.theme !== undefined ? this.config.theme : 'system'}
             name="theme"
           >
-            <option value="on">浅色主题（白底黑字）</option>
-            <option value="off">深色主题（深灰底白字）</option>
+            <option value="light">浅色主题（白底黑字）</option>
+            <option value="dark">深色主题（深灰底白字）</option>
           </select>
         </div>
         
@@ -1777,7 +1782,7 @@ class PetroChinaButton extends LitElement {
     this._loading = false;
     this._dataLoaded = false;  //button新元素
     this._refreshInterval = null;
-    this.theme = 'on';
+    this.theme = 'system';
   }
 
   static getConfigElement() {
@@ -1804,20 +1809,24 @@ class PetroChinaButton extends LitElement {
   }
 
   _evaluateTheme() {
-    try {
-      if (!this.config || !this.config.theme) return 'on';
-      if (typeof this.config.theme === 'function') {
-          return this.config.theme();
+      try {
+          const mode = this.config ? this.config.theme : 'system';
+          if (mode === 'light') return 'light';
+          if (mode === 'dark') return 'dark';
+          if (mode === 'system' || !mode) {
+              if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+              return 'light';
+          }
+          if (mode === 'function' || (typeof mode === 'string' && mode.includes('theme()'))) {
+              if (typeof window.theme === 'function') {
+                  return window.theme() || 'light';
+              }
+            return 'light';
+          }
+          return mode;
+      } catch (e) {
+          return 'light';
       }
-      if (typeof this.config.theme === 'string' && 
-              (this.config.theme.includes('return') || this.config.theme.includes('=>'))) {
-          return (new Function(`return ${this.config.theme}`))();
-      }
-      return this.config.theme;
-    } catch(e) {
-      console.error('计算主题时出错:', e);
-      return 'on';
-    }
   }
 
   disconnectedCallback() {
@@ -2312,8 +2321,8 @@ class PetroChinaButton extends LitElement {
     }
     // 获取主题和颜色
     const theme = this._evaluateTheme();
-    const fgColor = theme === 'on' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
-    const bgColor = theme === 'on' ? 'rgb(255, 255, 255)' : 'rgb(50, 50, 50)';
+    const fgColor = theme === 'light' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
+    const bgColor = theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(50, 50, 50)';
 
     /*button新元素 前9行和最后1行开始*/
     const showPreview = this.config.no_preview === true;
@@ -2325,7 +2334,7 @@ class PetroChinaButton extends LitElement {
     const buttonIcon = this.config.button_icon || '⛽';
     
     // 设置背景颜色
-    const buttonBgColor = transparentBg ? 'transparent' : theme === 'on' ? 'rgb(255, 255, 255, 0.6)' : 'rgb(83, 83, 83, 0.6)';
+    const buttonBgColor = transparentBg ? 'transparent' : theme === 'light' ? 'rgb(255, 255, 255, 0.6)' : 'rgb(83, 83, 83, 0.6)';
     
     // 获取小数点精度
     const decimalPrecision = this.config.decimal_precision !== undefined ? parseInt(this.config.decimal_precision) : 1;
