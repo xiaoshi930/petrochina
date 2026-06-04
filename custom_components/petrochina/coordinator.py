@@ -10,6 +10,8 @@ import aiohttp
 import async_timeout
 from bs4 import BeautifulSoup
 import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -191,7 +193,7 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
         
         # 然后获取全国油价趋势信息
         try:
-            response = requests.get(self.url, headers=HEADERS, timeout=10)
+            response = requests.get(self.url, headers=HEADERS, timeout=10, verify=False)
             response.raise_for_status()
             
             # 设置编码为 UTF-8
@@ -201,8 +203,18 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
             trend_text = soup.get_text()
             
             # 提取当前调整信息
-            # 格式：2026年5月8日24时油价调整，本轮油价调整为：汽油上调320元/吨...
-            if current_match := re.search(r'(\d{4}年)(\d{1,2}月)(\d{1,2}日)(\d{2}时)油价调整，本轮油价调整为：(.+?)，下一轮油价调整窗口时间：(\d{4}年)(\d{1,2}月)(\d{1,2}日)(\d{2}时)', trend_text):
+            # 格式1：2026年5月8日24时油价调整，本轮油价调整为：汽油上调320元/吨...
+            # 格式2：2026年5月21日24时油价调整，本轮油价调整为：汽油上调75元/吨，柴油上调70元/吨，92号汽油上调0.06元/升...
+            current_match = re.search(r'(\d{4}年)(\d{1,2}月)(\d{1,2}日)(\d{2}时)油价调整，本轮油价调整为：(.+?)，下一轮油价调整窗口时间：(\d{4}年)(\d{1,2}月)(\d{1,2}日)(\d{2}时)', trend_text)
+            
+            # 新规则：支持多行格式及混合标点（全角/半角逗号、冒号、多余空白）
+            if not current_match:
+                current_match = re.search(
+                    r'(\d{4}年)\s*(\d{1,2}月)\s*(\d{1,2}日)\s*(\d{2}时)\s*油价调整\s*[，,]\s*本轮油价调整为\s*[：:]\s*(.+?)\s*[，,]\s*下一轮油价调整窗口时间\s*[：:]\s*(\d{4}年)\s*(\d{1,2}月)\s*(\d{1,2}日)\s*(\d{2}时)',
+                    trend_text, re.DOTALL
+                )
+            
+            if current_match:
                 # 格式化本轮时间
                 year = current_match.group(1).replace("年", "")
                 month = current_match.group(2).replace("月", "").zfill(2)
