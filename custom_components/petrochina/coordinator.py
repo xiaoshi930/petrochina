@@ -24,6 +24,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 URL = "https://www.youjiatong.com/tiaozheng.html"
+URL2 = "https://oil.lygxcjg.cn/tiaozheng/"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -100,6 +101,65 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
                 
         except (IOError, OSError) as error:
             _LOGGER.error(f"保存缓存文件失败: {error}")
+
+    def _parse_lygxcjg(self, text):
+        """解析 oil.lygxcjg.cn 网站数据。"""
+        result = {}
+        
+        # 清理文本中数字内的空格，如 "0. 515" -> "0.515"
+        clean_text = re.sub(r'(\d+)\s*\.\s*(\d+)', r'\1.\2', text)
+        
+        # 提取本轮调整时间和下轮调整时间
+        # 格式：2026年06月19日24时油价调整 ， 本轮油价调整为：...下一轮油价调整窗口时间： 2026年07月03日24时
+        date_match = re.search(
+            r'(\d{4}年)\s*(\d{1,2}月)\s*(\d{1,2}日)\s*(\d{2}时)\s*油价调整.+?下一轮油价调整窗口时间[：:]\s*(\d{4}年)\s*(\d{1,2}月)\s*(\d{1,2}日)\s*(\d{2}时)',
+            clean_text, re.DOTALL
+        )
+        
+        if not date_match:
+            _LOGGER.warning("无法从 lygxcjg 网站解析日期信息")
+            return None
+        
+        year = date_match.group(1).replace("年", "")
+        month = date_match.group(2).replace("月", "").zfill(2)
+        day = date_match.group(3).replace("日", "").zfill(2)
+        current_date = f"{year}-{month}-{day}"
+        
+        next_year = date_match.group(5).replace("年", "")
+        next_month = date_match.group(6).replace("月", "").zfill(2)
+        next_day = date_match.group(7).replace("日", "").zfill(2)
+        next_date = f"{next_year}-{next_month}-{next_day}"
+        
+        result["本轮调整时间"] = current_date
+        result["下轮调整时间"] = next_date
+        result["下轮调整价格"] = "暂无"
+        
+        # 解析本轮调整价格
+        price_dict = {}
+        
+        # 匹配具体油品标号（元/升）：92号汽油、95号汽油、98号汽油、0号柴油
+        for match in re.finditer(r'(92号汽油|95号汽油|98号汽油|0号柴油)\s*(上调|下调)\s*(\d+\.?\d*)\s*元/升', clean_text):
+            oil_type = match.group(1)
+            change_type = match.group(2)
+            price_val = match.group(3)
+            price_dict[oil_type] = f"{change_type}{price_val}元/升"
+        
+        # 匹配汽柴油整体调整（元/吨），兼容 "汽油价格" -> "汽油"、"柴油价格" -> "柴油"
+        for match in re.finditer(r'(汽油价格|柴油价格|汽油|柴油)\s*(上调|下调)\s*(\d+\.?\d*)\s*元/吨', clean_text):
+            oil_type = match.group(1)
+            # 标准化名称
+            if oil_type == "汽油价格":
+                oil_type = "汽油"
+            elif oil_type == "柴油价格":
+                oil_type = "柴油"
+            change_type = match.group(2)
+            price_val = match.group(3)
+            price_dict[oil_type] = f"{change_type}{price_val}元/吨"
+        
+        result["本轮调整价格"] = price_dict
+        
+        _LOGGER.info(f"lygxcjg 解析结果: 本轮={current_date}, 下轮={next_date}, 价格项={len(price_dict)}")
+        return result
 
     async def _async_update_data(self):
         """Update data via library."""
@@ -249,6 +309,47 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
                 oil_data["本轮调整价格"] = price_dict
                 oil_data["下轮调整时间"] = next_date
                 oil_data["下轮调整价格"] = "暂无"
+                
+                # 保存 youjiatong 原始解析数据，方便调试
+                oil_data["_youjiatong"] = {
+                    "本轮调整时间": current_date,
+                    "本轮调整价格": price_dict,
+                    "下轮调整时间": next_date,
+                    "下轮调整价格": "暂无",
+                }
+
+            # 从备用网站 oil.lygxcjg.cn 获取数据，与现有结果合并（以最新时间为准）
+            try:
+                response2 = requests.get(URL2, headers=HEADERS, timeout=10, verify=False)
+                response2.raise_for_status()
+                response2.encoding = 'utf-8'
+                soup2 = BeautifulSoup(response2.text, 'html.parser')
+                trend_text2 = soup2.get_text()
+                
+                data2 = self._parse_lygxcjg(trend_text2)
+                if data2 and data2.get("本轮调整时间"):
+                    # 保存 lygxcjg 原始解析数据，方便调试
+                    oil_data["_lygxcjg"] = data2
+                    
+                    # 比较本轮调整时间，使用最新的
+                    existing_time = oil_data.get("本轮调整时间", "")
+                    new_time = data2.get("本轮调整时间", "")
+                    
+                    if not existing_time or new_time > existing_time:
+                        oil_data["本轮调整时间"] = new_time
+                        oil_data["本轮调整价格"] = data2.get("本轮调整价格", {})
+                        _LOGGER.info(f"采用 lygxcjg 数据（本轮: {new_time}），比现有 {existing_time} 更新")
+                    
+                    # 比较下轮调整时间，使用最新的
+                    existing_next = oil_data.get("下轮调整时间", "")
+                    new_next = data2.get("下轮调整时间", "")
+                    
+                    if not existing_next or new_next > existing_next:
+                        oil_data["下轮调整时间"] = new_next
+                        oil_data["下轮调整价格"] = data2.get("下轮调整价格", "暂无")
+                    
+            except requests.RequestException as error:
+                _LOGGER.warning(f"获取备用网站 lygxcjg 数据失败: {error}")
 
             # 提取2026年调整日历
             calendar = {}

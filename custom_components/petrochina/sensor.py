@@ -115,6 +115,12 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
             if "下轮调整价格" in self.coordinator.data:
                 attrs["下轮调整价格"] = self.coordinator.data["下轮调整价格"]
 
+            # 添加两个网站原始解析数据，方便调试
+            if "_youjiatong" in self.coordinator.data:
+                attrs["youjiatong数据"] = self.coordinator.data["_youjiatong"]
+            if "_lygxcjg" in self.coordinator.data:
+                attrs["lygxcjg数据"] = self.coordinator.data["_lygxcjg"]
+
             # 添加全国省份油价排序（按92+95均价从低到高）
             if "全国油价数据" in self.coordinator.data:
                 all_provinces = self.coordinator.data["全国油价数据"]
