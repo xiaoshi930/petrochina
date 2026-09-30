@@ -174,7 +174,7 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
                     return data
                 else:
                     # 如果获取的数据不完整，尝试使用缓存
-                    cached_data = self._load_cache()
+                    cached_data = await self.hass.async_add_executor_job(self._load_cache)
                     if cached_data:
                         return cached_data
                     else:
@@ -184,7 +184,7 @@ class OilPriceDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning(f"API访问失败，尝试使用缓存数据: {error}")
             
             # API访问失败时，尝试使用缓存数据
-            cached_data = self._load_cache()
+            cached_data = await self.hass.async_add_executor_job(self._load_cache)
             if cached_data:
                 return cached_data
             else:
