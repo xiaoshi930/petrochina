@@ -142,25 +142,13 @@ class OilPriceSensor(CoordinatorEntity, SensorEntity):
                 
                 attrs["全国油价排序"] = display_provinces
             
-            # 添加调整日历（按2026、2025、2024排序，上调加💖，下调加💚）
+            # 添加调整日历（按 2026、2025、2024 倒序，日期内容保持原样不加标记）
             if "调整日历" in self.coordinator.data:
                 calendar = self.coordinator.data["调整日历"]
                 sorted_calendar = {}
-                for year in ["2026", "2025", "2024"]:
-                    if year in calendar:
-                        year_data = dict(calendar[year])
-                        # 处理日期中的emoji
-                        if "日期" in year_data:
-                            dates = {}
-                            for date_str, status in year_data["日期"].items():
-                                if "上调" in status:
-                                    dates[date_str] = status + "💖"
-                                elif "下调" in status:
-                                    dates[date_str] = status + "💚"
-                                else:
-                                    dates[date_str] = status
-                            year_data["日期"] = dates
-                        sorted_calendar[year] = year_data
+                # 年份倒序：2026 → 2025 → 2024（新增年份会自动排在最前）
+                for year in sorted(calendar.keys(), reverse=True):
+                    sorted_calendar[year] = dict(calendar[year])
                 attrs["调整日历"] = sorted_calendar
 
         return attrs
